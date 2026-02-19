@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bill Tracker</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay hidden">
+        <div class="spinner"></div>
+        <p>Processing...</p>
+    </div>
+
+    <!-- Header -->
+    <header class="header">
+        <h1>📊 Bill Tracker</h1>
+        <p>Track and analyze your expenses with AI</p>
+    </header>
+
+    <!-- Main Container -->
+    <main class="container">
+        <!-- Tab Navigation -->
+        <nav class="tabs">
+            <button class="tab-btn active" data-tab="upload">Upload Bill</button>
+            <button class="tab-btn" data-tab="insights">Insights</button>
+        </nav>
+
+        <!-- Upload Tab -->
+        <section id="upload-tab" class="tab-content active">
+            <!-- Drop Zone -->
+            <div class="card">
+                <h2>Upload Bill Image</h2>
+                <div id="drop-zone" class="drop-zone">
+                    <input type="file" id="file-input" accept="image/*" hidden>
+                    <div class="drop-zone-content">
+                        <span class="drop-icon">📁</span>
+                        <p>Drag & drop your bill image here</p>
+                        <p class="drop-hint">or click to browse</p>
+                    </div>
+                </div>
+
+                <!-- Image Preview -->
+                <div id="preview-container" class="preview-container hidden">
+                    <img id="image-preview" src="" alt="Bill Preview">
+                    <button id="extract-btn" class="btn btn-primary">Extract Bill Data</button>
+                </div>
+            </div>
+
+            <!-- Review Form -->
+            <div id="review-form" class="card hidden">
+                <h2>Review Extracted Data</h2>
+                <div id="extraction-warning" class="warning hidden">
+                    <span>⚠️</span>
+                    <p>Could not extract all data automatically. Please fill in the details manually.</p>
+                </div>
+                <form id="bill-form">
+                    <div class="form-group">
+                        <label for="vendor">Vendor</label>
+                        <input type="text" id="vendor" name="vendor" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="category">Category</label>
+                        <select id="category" name="category" required>
+                            <option value="food">Food</option>
+                            <option value="travel">Travel</option>
+                            <option value="utilities">Utilities</option>
+                            <option value="shopping">Shopping</option>
+                            <option value="healthcare">Healthcare</option>
+                            <option value="entertainment">Entertainment</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="date">Date</label>
+                        <input type="date" id="date" name="date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="amount">Amount (₹)</label>
+                        <input type="number" id="amount" name="amount" step="0.01" min="0.01" required>
+                    </div>
+                    <input type="hidden" id="image-path" name="image_path">
+                    <button type="submit" class="btn btn-success">Save Bill</button>
+                </form>
+            </div>
+
+            <!-- Bills Table -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>Saved Bills</h2>
+                    <button id="export-btn" class="btn btn-secondary">Export CSV</button>
+                </div>
+                <div class="table-container">
+                    <table id="bills-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Vendor</th>
+                                <th>Category</th>
+                                <th>Amount</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bills-body">
+                            <!-- Bills will be rendered here -->
+                        </tbody>
+                    </table>
+                    <p id="no-bills" class="no-data hidden">No bills saved yet. Upload your first bill above!</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Insights Tab -->
+        <section id="insights-tab" class="tab-content">
+            <!-- Stat Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>Total This Month</h3>
+                    <p id="total-month" class="stat-value">₹0.00</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Total This Year</h3>
+                    <p id="total-year" class="stat-value">₹0.00</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Top Category</h3>
+                    <p id="top-category" class="stat-value">-</p>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="charts-grid">
+                <div class="card chart-card">
+                    <h2>Spending by Category (This Month)</h2>
+                    <canvas id="category-chart"></canvas>
+                </div>
+                <div class="card chart-card">
+                    <h2>Monthly Spending Trend</h2>
+                    <canvas id="trend-chart"></canvas>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast hidden"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
