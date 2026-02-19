@@ -1,7 +1,9 @@
 fastapi
-uvicorn
+uvicorn[standard]
+gunicorn
 requests
 python-dotenv
 pillow
 aiofiles
 python-multipart
+psycopg2-binary
