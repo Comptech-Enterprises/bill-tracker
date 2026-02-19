@@ -896,9 +896,6 @@ const reportIssueModal = document.getElementById('report-issue-modal');
 const reportCancelBtn = document.getElementById('report-cancel');
 const reportSubmitBtn = document.getElementById('report-submit');
 
-// GitHub repository details - update these to match your repo
-const GITHUB_REPO_OWNER = 'Paawan13';
-const GITHUB_REPO_NAME = 'bill_tracker';
 
 function initReportIssue() {
     if (!reportIssueBtn || !reportIssueModal) return;
@@ -991,78 +988,47 @@ async function submitIssue() {
     showLoading(true);
 
     try {
-        // Build issue body
-        let body = '';
+        // Build environment info
+        let environment = '';
+        environment += `- **URL**: ${window.location.href}\n`;
+        environment += `- **User Agent**: ${navigator.userAgent}\n`;
+        environment += `- **Screen**: ${window.screen.width}x${window.screen.height}\n`;
+        environment += `- **Viewport**: ${window.innerWidth}x${window.innerHeight}\n`;
+        environment += `- **Timestamp**: ${new Date().toISOString()}`;
 
-        // Type label
-        const typeLabels = {
-            'bug': 'Bug Report',
-            'enhancement': 'Feature Request',
-            'question': 'Question'
-        };
-        body += `## ${typeLabels[issueType] || 'Issue'}\n\n`;
+        // Get console logs if requested
+        const consoleLogs = includeConsole ? formatConsoleLogs() : '';
 
-        // Description
-        if (description) {
-            body += `### Description\n${description}\n\n`;
-        }
-
-        // Environment info
-        body += `### Environment\n`;
-        body += `- **URL**: ${window.location.href}\n`;
-        body += `- **User Agent**: ${navigator.userAgent}\n`;
-        body += `- **Screen**: ${window.screen.width}x${window.screen.height}\n`;
-        body += `- **Viewport**: ${window.innerWidth}x${window.innerHeight}\n`;
-        body += `- **Timestamp**: ${new Date().toISOString()}\n\n`;
-
-        // Console logs
-        if (includeConsole) {
-            const logs = formatConsoleLogs();
-            body += `### Console Logs\n\`\`\`\n${logs}\n\`\`\`\n\n`;
-        }
-
-        // Screenshot instructions
+        // Get screenshot if requested
+        let screenshot = null;
         if (includeScreenshot) {
-            const screenshotData = await captureScreenshot();
-            if (screenshotData) {
-                body += `### Screenshot\n`;
-                body += `> A screenshot was captured. Please paste it below by pressing Ctrl+V (Cmd+V on Mac) in the GitHub issue editor.\n`;
-                body += `> The screenshot has been copied to your clipboard.\n\n`;
-
-                // Try to copy screenshot to clipboard
-                try {
-                    const blob = await (await fetch(screenshotData)).blob();
-                    await navigator.clipboard.write([
-                        new ClipboardItem({ 'image/png': blob })
-                    ]);
-                } catch (clipboardError) {
-                    console.warn('Could not copy screenshot to clipboard:', clipboardError);
-                    // Open screenshot in new tab as fallback
-                    body += `> If clipboard paste doesn't work, right-click and save this image:\n`;
-                    body += `> [Screenshot captured - will open in new tab]\n\n`;
-                    window.open(screenshotData, '_blank');
-                }
-            }
+            screenshot = await captureScreenshot();
         }
 
-        // Build GitHub issue URL
-        const labels = issueType === 'bug' ? 'bug' : issueType === 'enhancement' ? 'enhancement' : 'question';
-        const issueTitle = `[${typeLabels[issueType]}] ${title}`;
-
-        // URL encode the parameters
-        const params = new URLSearchParams({
-            title: issueTitle,
-            body: body,
-            labels: labels
+        // Send to backend API
+        const response = await fetch(`${API_URL}/report-issue`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                title: title,
+                issue_type: issueType,
+                description: description,
+                environment: environment,
+                console_logs: consoleLogs,
+                screenshot: screenshot
+            })
         });
 
-        const githubUrl = `https://github.com/${GITHUB_REPO_OWNER}/${GITHUB_REPO_NAME}/issues/new?${params.toString()}`;
+        const data = await response.json();
 
-        // Open GitHub issue page
-        window.open(githubUrl, '_blank');
-
-        hideReportModal();
-        showToast('Opening GitHub issue page...', 'success');
+        if (response.ok && data.success) {
+            hideReportModal();
+            showToast(`Issue #${data.issue_number} created successfully!`, 'success');
+        } else {
+            throw new Error(data.detail || 'Failed to create issue');
+        }
 
     } catch (error) {
         console.error('Error creating issue:', error);

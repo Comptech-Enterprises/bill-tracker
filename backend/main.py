@@ -1,9 +1,11 @@
 import os
 import uuid
+import httpx
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, validator
+from typing import Optional, List
 from dotenv import load_dotenv
 
 from database import init_db, insert_bill, get_all_bills, delete_bill, get_insights
@@ -44,6 +46,15 @@ class BillCreate(BaseModel):
         if v <= 0:
             raise ValueError("Amount must be a positive number")
         return v
+
+
+class IssueReport(BaseModel):
+    title: str
+    issue_type: str  # bug, enhancement, question
+    description: Optional[str] = ""
+    environment: Optional[str] = ""
+    console_logs: Optional[str] = ""
+    screenshot: Optional[str] = None  # base64 encoded image
 
 
 @app.on_event("startup")
@@ -156,3 +167,67 @@ async def get_spending_insights():
         return insights
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch insights: {str(e)}")
+
+
+@app.post("/report-issue")
+async def report_issue(issue: IssueReport):
+    """Create a GitHub issue for bug reports or feature requests."""
+    github_token = os.getenv("GITHUB_TOKEN")
+    if not github_token:
+        raise HTTPException(status_code=500, detail="GitHub token not configured")
+
+    # GitHub repo details
+    repo_owner = "Paawan13"
+    repo_name = "bill_tracker"
+
+    # Build issue body
+    type_labels = {
+        "bug": "Bug Report",
+        "enhancement": "Feature Request",
+        "question": "Question"
+    }
+
+    body = f"## {type_labels.get(issue.issue_type, 'Issue')}\n\n"
+
+    if issue.description:
+        body += f"### Description\n{issue.description}\n\n"
+
+    if issue.environment:
+        body += f"### Environment\n{issue.environment}\n\n"
+
+    if issue.console_logs:
+        body += f"### Console Logs\n```\n{issue.console_logs}\n```\n\n"
+
+    # Prepare labels
+    labels = [issue.issue_type] if issue.issue_type in ["bug", "enhancement", "question"] else []
+
+    # Create issue via GitHub API
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"https://api.github.com/repos/{repo_owner}/{repo_name}/issues",
+                headers={
+                    "Authorization": f"token {github_token}",
+                    "Accept": "application/vnd.github.v3+json",
+                    "X-GitHub-Api-Version": "2022-11-28"
+                },
+                json={
+                    "title": f"[{type_labels.get(issue.issue_type, 'Issue')}] {issue.title}",
+                    "body": body,
+                    "labels": labels
+                }
+            )
+
+            if response.status_code == 201:
+                issue_data = response.json()
+                return {
+                    "success": True,
+                    "issue_number": issue_data["number"],
+                    "issue_url": issue_data["html_url"]
+                }
+            else:
+                error_detail = response.json().get("message", "Unknown error")
+                raise HTTPException(status_code=response.status_code, detail=f"GitHub API error: {error_detail}")
+
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=500, detail=f"Failed to connect to GitHub: {str(e)}")
