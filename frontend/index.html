@@ -2,150 +2,278 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bill Tracker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1a1612">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Billkeeper</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <!-- Loading Overlay -->
     <div id="loading-overlay" class="loading-overlay hidden">
-        <div class="spinner"></div>
-        <p>Processing...</p>
+        <div class="loader">
+            <div class="loader-receipt"></div>
+            <p>Reading your bill...</p>
+        </div>
     </div>
 
-    <!-- Header -->
-    <header class="header">
-        <h1>📊 Bill Tracker</h1>
-        <p>Track and analyze your expenses with AI</p>
-    </header>
+    <!-- App Shell -->
+    <div class="app-shell">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <span class="logo-icon">B</span>
+                    <div class="logo-text">
+                        <h1>Billkeeper</h1>
+                        <p class="tagline">Track every rupee</p>
+                    </div>
+                </div>
+                <div class="header-stats" id="header-stats">
+                    <span class="month-spend" id="quick-total">₹0</span>
+                    <span class="month-label">this month</span>
+                </div>
+            </div>
+        </header>
 
-    <!-- Main Container -->
-    <main class="container">
-        <!-- Tab Navigation -->
-        <nav class="tabs">
-            <button class="tab-btn active" data-tab="upload">Upload Bill</button>
-            <button class="tab-btn" data-tab="insights">Insights</button>
-        </nav>
-
-        <!-- Upload Tab -->
-        <section id="upload-tab" class="tab-content active">
-            <!-- Drop Zone -->
-            <div class="card">
-                <h2>Upload Bill Image</h2>
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Upload Section - Always visible on mobile -->
+            <section class="upload-section" id="upload-section">
                 <div id="drop-zone" class="drop-zone">
-                    <input type="file" id="file-input" accept="image/*" hidden>
-                    <div class="drop-zone-content">
-                        <span class="drop-icon">📁</span>
-                        <p>Drag & drop your bill image here</p>
-                        <p class="drop-hint">or click to browse</p>
+                    <input type="file" id="file-input" accept="image/*" capture="environment" hidden>
+                    <div class="drop-zone-inner">
+                        <div class="camera-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <rect x="2" y="6" width="20" height="14" rx="3"/>
+                                <circle cx="12" cy="13" r="4"/>
+                                <path d="M7 6V5a2 2 0 012-2h6a2 2 0 012 2v1"/>
+                            </svg>
+                        </div>
+                        <p class="drop-text">Snap or upload bill</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Preview & Review Section -->
+            <section id="review-section" class="review-section hidden">
+                <div class="receipt-card">
+                    <div class="receipt-tear-top"></div>
+                    <div class="receipt-content">
+                        <div class="preview-wrapper">
+                            <img id="image-preview" src="" alt="Bill Preview">
+                            <button id="retake-btn" class="retake-btn">Retake</button>
+                        </div>
+
+                        <div id="extraction-warning" class="extraction-warning hidden">
+                            <span class="warning-icon">!</span>
+                            <p>Couldn't read everything. Fill in details below.</p>
+                        </div>
+
+                        <form id="bill-form" class="bill-form">
+                            <div class="form-row">
+                                <div class="form-field">
+                                    <label for="vendor">Shop / Vendor</label>
+                                    <input type="text" id="vendor" name="vendor" placeholder="e.g. Swiggy, BigBazaar" required>
+                                </div>
+                            </div>
+
+                            <div class="form-row two-col">
+                                <div class="form-field">
+                                    <label for="amount">Amount</label>
+                                    <div class="amount-input-wrap">
+                                        <span class="currency">₹</span>
+                                        <input type="number" id="amount" name="amount" step="0.01" min="0.01" placeholder="0.00" required>
+                                    </div>
+                                </div>
+                                <div class="form-field">
+                                    <label for="date">Date</label>
+                                    <input type="date" id="date" name="date" required>
+                                </div>
+                            </div>
+
+                            <div class="form-field">
+                                <label>Category</label>
+                                <div class="category-pills">
+                                    <input type="radio" name="category" value="food" id="cat-food" checked>
+                                    <label for="cat-food" class="pill pill-food">Food</label>
+
+                                    <input type="radio" name="category" value="travel" id="cat-travel">
+                                    <label for="cat-travel" class="pill pill-travel">Travel</label>
+
+                                    <input type="radio" name="category" value="shopping" id="cat-shopping">
+                                    <label for="cat-shopping" class="pill pill-shopping">Shopping</label>
+
+                                    <input type="radio" name="category" value="utilities" id="cat-utilities">
+                                    <label for="cat-utilities" class="pill pill-utilities">Bills</label>
+
+                                    <input type="radio" name="category" value="healthcare" id="cat-healthcare">
+                                    <label for="cat-healthcare" class="pill pill-healthcare">Health</label>
+
+                                    <input type="radio" name="category" value="entertainment" id="cat-entertainment">
+                                    <label for="cat-entertainment" class="pill pill-entertainment">Fun</label>
+
+                                    <input type="radio" name="category" value="other" id="cat-other">
+                                    <label for="cat-other" class="pill pill-other">Other</label>
+                                </div>
+                            </div>
+
+                            <input type="hidden" id="image-path" name="image_path">
+
+                            <button type="submit" class="save-btn">
+                                <span>Save Bill</span>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                                </svg>
+                            </button>
+                        </form>
+                    </div>
+                    <div class="receipt-tear-bottom"></div>
+                </div>
+            </section>
+
+            <!-- Bills List Section -->
+            <section class="bills-section" id="bills-section">
+                <div class="section-header">
+                    <h2>Recent Bills</h2>
+                    <button id="export-btn" class="export-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                        </svg>
+                        Export
+                    </button>
+                </div>
+
+                <div id="bills-list" class="bills-list">
+                    <!-- Bills rendered here -->
+                </div>
+
+                <div id="no-bills" class="no-bills hidden">
+                    <div class="empty-state">
+                        <div class="empty-receipt"></div>
+                        <p>No bills yet</p>
+                        <span>Snap your first receipt above</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Insights Section -->
+            <section class="insights-section" id="insights-section">
+                <div class="section-header">
+                    <h2>Spending Breakdown</h2>
+                </div>
+
+                <!-- Quick Stats -->
+                <div class="stats-row">
+                    <div class="stat-card stat-month">
+                        <span class="stat-label">This Month</span>
+                        <span class="stat-value" id="total-month">₹0</span>
+                    </div>
+                    <div class="stat-card stat-year">
+                        <span class="stat-label">This Year</span>
+                        <span class="stat-value" id="total-year">₹0</span>
                     </div>
                 </div>
 
-                <!-- Image Preview -->
-                <div id="preview-container" class="preview-container hidden">
-                    <img id="image-preview" src="" alt="Bill Preview">
-                    <button id="extract-btn" class="btn btn-primary">Extract Bill Data</button>
-                </div>
-            </div>
-
-            <!-- Review Form -->
-            <div id="review-form" class="card hidden">
-                <h2>Review Extracted Data</h2>
-                <div id="extraction-warning" class="warning hidden">
-                    <span>⚠️</span>
-                    <p>Could not extract all data automatically. Please fill in the details manually.</p>
-                </div>
-                <form id="bill-form">
-                    <div class="form-group">
-                        <label for="vendor">Vendor</label>
-                        <input type="text" id="vendor" name="vendor" required>
+                <!-- Category Chart -->
+                <div class="chart-card">
+                    <h3>By Category</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="category-chart"></canvas>
                     </div>
-                    <div class="form-group">
-                        <label for="category">Category</label>
-                        <select id="category" name="category" required>
-                            <option value="food">Food</option>
-                            <option value="travel">Travel</option>
-                            <option value="utilities">Utilities</option>
-                            <option value="shopping">Shopping</option>
-                            <option value="healthcare">Healthcare</option>
-                            <option value="entertainment">Entertainment</option>
-                            <option value="other">Other</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="date">Date</label>
-                        <input type="date" id="date" name="date" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="amount">Amount (₹)</label>
-                        <input type="number" id="amount" name="amount" step="0.01" min="0.01" required>
-                    </div>
-                    <input type="hidden" id="image-path" name="image_path">
-                    <button type="submit" class="btn btn-success">Save Bill</button>
-                </form>
-            </div>
+                    <div id="category-legend" class="category-legend"></div>
+                </div>
 
-            <!-- Bills Table -->
-            <div class="card">
-                <div class="card-header">
-                    <h2>Saved Bills</h2>
-                    <button id="export-btn" class="btn btn-secondary">Export CSV</button>
+                <!-- Trend Chart -->
+                <div class="chart-card">
+                    <h3>Monthly Trend</h3>
+                    <div class="chart-wrapper chart-wrapper-line">
+                        <canvas id="trend-chart"></canvas>
+                    </div>
                 </div>
-                <div class="table-container">
-                    <table id="bills-table">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Vendor</th>
-                                <th>Category</th>
-                                <th>Amount</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="bills-body">
-                            <!-- Bills will be rendered here -->
-                        </tbody>
-                    </table>
-                    <p id="no-bills" class="no-data hidden">No bills saved yet. Upload your first bill above!</p>
-                </div>
-            </div>
-        </section>
 
-        <!-- Insights Tab -->
-        <section id="insights-tab" class="tab-content">
-            <!-- Stat Cards -->
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <h3>Total This Month</h3>
-                    <p id="total-month" class="stat-value">₹0.00</p>
+                <!-- Monthly Breakdown -->
+                <div class="monthly-breakdown-section">
+                    <div class="section-header">
+                        <h3>Month by Month</h3>
+                    </div>
+                    <div id="monthly-breakdown" class="monthly-breakdown">
+                        <!-- Monthly items rendered here -->
+                    </div>
+                    <div id="no-monthly-data" class="no-monthly-data hidden">
+                        <p>No monthly data yet</p>
+                    </div>
                 </div>
-                <div class="stat-card">
-                    <h3>Total This Year</h3>
-                    <p id="total-year" class="stat-value">₹0.00</p>
-                </div>
-                <div class="stat-card">
-                    <h3>Top Category</h3>
-                    <p id="top-category" class="stat-value">-</p>
-                </div>
-            </div>
+            </section>
+        </main>
 
-            <!-- Charts -->
-            <div class="charts-grid">
-                <div class="card chart-card">
-                    <h2>Spending by Category (This Month)</h2>
-                    <canvas id="category-chart"></canvas>
-                </div>
-                <div class="card chart-card">
-                    <h2>Monthly Spending Trend</h2>
-                    <canvas id="trend-chart"></canvas>
-                </div>
-            </div>
-        </section>
-    </main>
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <button class="nav-item active" data-tab="bills">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <rect x="4" y="2" width="16" height="20" rx="2"/>
+                    <line x1="8" y1="6" x2="16" y2="6"/>
+                    <line x1="8" y1="10" x2="16" y2="10"/>
+                    <line x1="8" y1="14" x2="12" y2="14"/>
+                </svg>
+                <span>Bills</span>
+            </button>
+            <button class="nav-item nav-item-add" id="add-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+            </button>
+            <button class="nav-item" data-tab="insights">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M18 20V10M12 20V4M6 20v-6"/>
+                </svg>
+                <span>Insights</span>
+            </button>
+        </nav>
+    </div>
 
     <!-- Toast Notification -->
     <div id="toast" class="toast hidden"></div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="delete-modal" class="modal hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <h3>Delete Bill?</h3>
+            <p>This action cannot be undone.</p>
+            <div class="modal-actions">
+                <button class="modal-btn modal-cancel">Cancel</button>
+                <button class="modal-btn modal-confirm">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Confirmation Modal -->
+    <div id="image-confirm-modal" class="modal hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content modal-content-image">
+            <h3>Use this image?</h3>
+            <div class="confirm-image-preview">
+                <img id="confirm-preview-img" src="" alt="Selected bill">
+            </div>
+            <p class="confirm-hint">Make sure the bill is clear and readable</p>
+            <div class="modal-actions">
+                <button class="modal-btn modal-cancel" id="image-retake">Retake</button>
+                <button class="modal-btn modal-confirm-img" id="image-confirm">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16">
+                        <path d="M5 12l5 5L20 7"/>
+                    </svg>
+                    Scan Bill
+                </button>
+            </div>
+        </div>
+    </div>
 
     <script src="app.js"></script>
 </body>
