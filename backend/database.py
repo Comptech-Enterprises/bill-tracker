@@ -93,6 +93,16 @@ def get_insights() -> dict:
     """, (current_month,))
     spending_by_category = [{"category": row["category"], "total": row["total"]} for row in cursor.fetchall()]
 
+    # Spending by category for current year
+    cursor.execute("""
+        SELECT category, SUM(amount) as total
+        FROM bills
+        WHERE strftime('%Y', date) = ?
+        GROUP BY category
+        ORDER BY total DESC
+    """, (current_year,))
+    spending_by_category_year = [{"category": row["category"], "total": row["total"]} for row in cursor.fetchall()]
+
     # Monthly trend for last 12 months
     cursor.execute("""
         SELECT strftime('%Y-%m', date) as month, SUM(amount) as total
@@ -103,8 +113,13 @@ def get_insights() -> dict:
     """)
     monthly_trend = [{"month": row["month"], "total": row["total"]} for row in cursor.fetchall()]
 
-    # Top category this month
-    top_category_this_month = spending_by_category[0]["category"] if spending_by_category else None
+    # Top category this month (fallback to year if month is empty)
+    if spending_by_category:
+        top_category = spending_by_category[0]["category"]
+    elif spending_by_category_year:
+        top_category = spending_by_category_year[0]["category"]
+    else:
+        top_category = None
 
     # Total this month
     cursor.execute("""
@@ -122,12 +137,53 @@ def get_insights() -> dict:
     """, (current_year,))
     total_this_year = cursor.fetchone()["total"]
 
+    # Monthly breakdown with category details (last 12 months)
+    cursor.execute("""
+        SELECT
+            strftime('%Y-%m', date) as month,
+            category,
+            SUM(amount) as total,
+            COUNT(*) as count
+        FROM bills
+        WHERE date >= date('now', '-12 months')
+        GROUP BY month, category
+        ORDER BY month DESC, total DESC
+    """)
+
+    monthly_breakdown_raw = cursor.fetchall()
+
     conn.close()
+
+    # Organize by month
+    monthly_breakdown = {}
+    for row in monthly_breakdown_raw:
+        month = row["month"]
+        if month not in monthly_breakdown:
+            monthly_breakdown[month] = {
+                "month": month,
+                "total": 0,
+                "categories": []
+            }
+        monthly_breakdown[month]["total"] += row["total"]
+        monthly_breakdown[month]["categories"].append({
+            "category": row["category"],
+            "total": row["total"],
+            "count": row["count"]
+        })
+
+    # Convert to sorted list (most recent first)
+    monthly_breakdown_list = sorted(
+        monthly_breakdown.values(),
+        key=lambda x: x["month"],
+        reverse=True
+    )
 
     return {
         "spending_by_category": spending_by_category,
+        "spending_by_category_year": spending_by_category_year,
         "monthly_trend": monthly_trend,
-        "top_category_this_month": top_category_this_month,
+        "top_category_this_month": top_category,
         "total_this_month": total_this_month,
-        "total_this_year": total_this_year
+        "total_this_year": total_this_year,
+        "monthly_breakdown": monthly_breakdown_list
     }
