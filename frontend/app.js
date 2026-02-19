@@ -5,7 +5,7 @@
 // API Base URL - auto-detect environment
 const API_URL = window.location.hostname === 'localhost'
     ? 'http://localhost:8000'
-    : 'https://bill-tracker-api.onrender.com';  // UPDATE THIS with your Render backend URL
+    : 'https://bill-tracker-foap.onrender.com';
 
 // Global state
 let bills = [];
