@@ -12,6 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
     <!-- Loading Overlay -->
@@ -270,6 +271,74 @@
                         <path d="M5 12l5 5L20 7"/>
                     </svg>
                     Scan Bill
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Issue Button -->
+    <button id="report-issue-btn" class="report-issue-btn" aria-label="Report an issue">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 8v4M12 16h.01"/>
+        </svg>
+    </button>
+
+    <!-- Report Issue Modal -->
+    <div id="report-issue-modal" class="modal hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content modal-content-report">
+            <h3>Report an Issue</h3>
+            <p class="report-subtitle">Help us improve Billkeeper</p>
+
+            <div class="report-form">
+                <div class="form-field">
+                    <label for="issue-type">Type</label>
+                    <div class="issue-type-pills">
+                        <input type="radio" name="issue-type" value="bug" id="type-bug" checked>
+                        <label for="type-bug" class="pill pill-bug">Bug</label>
+
+                        <input type="radio" name="issue-type" value="enhancement" id="type-enhancement">
+                        <label for="type-enhancement" class="pill pill-enhancement">Enhancement</label>
+
+                        <input type="radio" name="issue-type" value="question" id="type-question">
+                        <label for="type-question" class="pill pill-question">Question</label>
+                    </div>
+                </div>
+
+                <div class="form-field">
+                    <label for="issue-title">Title</label>
+                    <input type="text" id="issue-title" placeholder="Brief description of the issue" required>
+                </div>
+
+                <div class="form-field">
+                    <label for="issue-description">Description</label>
+                    <textarea id="issue-description" rows="4" placeholder="Please describe the issue or enhancement in detail..."></textarea>
+                </div>
+
+                <div class="report-options">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="include-screenshot" checked>
+                        <span class="checkmark"></span>
+                        Include screenshot
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="include-console" checked>
+                        <span class="checkmark"></span>
+                        Include console logs
+                    </label>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="modal-btn modal-cancel" id="report-cancel">Cancel</button>
+                <button class="modal-btn modal-submit-report" id="report-submit">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                        <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/>
+                        <polyline points="15,3 21,3 21,9"/>
+                        <line x1="10" y1="14" x2="21" y2="3"/>
+                    </svg>
+                    Open GitHub Issue
                 </button>
             </div>
         </div>

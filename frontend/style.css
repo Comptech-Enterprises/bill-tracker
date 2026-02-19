@@ -1484,6 +1484,170 @@ input[type="radio"]:checked + .pill-other {
 /* ================================================
    DARK MODE SUPPORT
    ================================================ */
+/* ================================================
+   REPORT ISSUE BUTTON
+   ================================================ */
+.report-issue-btn {
+    position: fixed;
+    bottom: calc(var(--nav-height) + var(--space-md) + var(--safe-bottom));
+    right: var(--space-md);
+    width: 48px;
+    height: 48px;
+    background: var(--bg-dark);
+    color: var(--text-inverse);
+    border: none;
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 99;
+}
+
+.report-issue-btn svg {
+    width: 22px;
+    height: 22px;
+}
+
+.report-issue-btn:hover {
+    background: var(--accent-primary);
+    transform: scale(1.1);
+}
+
+.report-issue-btn:active {
+    transform: scale(0.95);
+}
+
+/* ================================================
+   REPORT ISSUE MODAL
+   ================================================ */
+.modal-content-report {
+    max-width: 380px;
+    text-align: left;
+}
+
+.modal-content-report h3 {
+    text-align: center;
+    margin-bottom: var(--space-xs);
+}
+
+.report-subtitle {
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: var(--space-lg) !important;
+}
+
+.report-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
+}
+
+.report-form .form-field label {
+    margin-bottom: var(--space-xs);
+}
+
+.report-form textarea {
+    width: 100%;
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--bg-secondary);
+    border-radius: var(--radius-sm);
+    font-size: 0.95rem;
+    font-family: var(--font-body);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    resize: vertical;
+    min-height: 80px;
+    transition: all 0.2s;
+}
+
+.report-form textarea:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    background: var(--bg-card);
+    box-shadow: 0 0 0 3px rgba(198, 93, 59, 0.1);
+}
+
+.report-form textarea::placeholder {
+    color: var(--text-muted);
+}
+
+/* Issue Type Pills */
+.issue-type-pills {
+    display: flex;
+    gap: var(--space-sm);
+}
+
+.issue-type-pills input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+input[type="radio"]:checked + .pill-bug {
+    background: #c53030;
+    border-color: #c53030;
+    color: white;
+}
+
+input[type="radio"]:checked + .pill-enhancement {
+    background: var(--accent-success);
+    border-color: var(--accent-success);
+    color: white;
+}
+
+input[type="radio"]:checked + .pill-question {
+    background: var(--cat-travel);
+    border-color: var(--cat-travel);
+    color: white;
+}
+
+/* Report Options */
+.report-options {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent-primary);
+    cursor: pointer;
+}
+
+/* Submit Button */
+.modal-submit-report {
+    background: var(--bg-dark);
+    color: var(--text-inverse);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.modal-submit-report:hover {
+    background: #2d2822;
+}
+
+.modal-submit-report svg {
+    flex-shrink: 0;
+}
+
 @media (prefers-color-scheme: dark) {
     :root {
         --bg-primary: #1a1612;
@@ -1567,5 +1731,35 @@ input[type="radio"]:checked + .pill-other {
 
     .category-bar-track {
         background: var(--bg-primary);
+    }
+
+    .report-issue-btn {
+        background: var(--bg-card);
+        color: var(--text-primary);
+        border: 1px solid var(--bg-secondary);
+    }
+
+    .report-issue-btn:hover {
+        background: var(--accent-primary);
+        color: white;
+        border-color: var(--accent-primary);
+    }
+
+    .report-form textarea {
+        background: var(--bg-primary);
+        border-color: var(--bg-primary);
+    }
+
+    .report-form textarea:focus {
+        background: var(--bg-secondary);
+        border-color: var(--accent-primary);
+    }
+
+    .modal-submit-report {
+        background: var(--accent-primary);
+    }
+
+    .modal-submit-report:hover {
+        background: #b85436;
     }
 }

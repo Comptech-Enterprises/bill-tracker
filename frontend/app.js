@@ -2,6 +2,49 @@
 // BILLKEEPER - Mobile-First Bill Tracker App
 // ================================================
 
+// Console log capture - must be initialized early
+const consoleLogs = [];
+const MAX_CONSOLE_LOGS = 50;
+
+// Store original console methods
+const originalConsole = {
+    log: console.log,
+    warn: console.warn,
+    error: console.error,
+    info: console.info
+};
+
+// Override console methods to capture logs
+['log', 'warn', 'error', 'info'].forEach(method => {
+    console[method] = function(...args) {
+        // Call original method
+        originalConsole[method].apply(console, args);
+
+        // Capture the log
+        const logEntry = {
+            type: method,
+            timestamp: new Date().toISOString(),
+            message: args.map(arg => {
+                if (typeof arg === 'object') {
+                    try {
+                        return JSON.stringify(arg, null, 2);
+                    } catch (e) {
+                        return String(arg);
+                    }
+                }
+                return String(arg);
+            }).join(' ')
+        };
+
+        consoleLogs.push(logEntry);
+
+        // Keep only the last MAX_CONSOLE_LOGS entries
+        if (consoleLogs.length > MAX_CONSOLE_LOGS) {
+            consoleLogs.shift();
+        }
+    };
+});
+
 // API Base URL - auto-detect environment
 const API_URL = window.location.hostname === 'localhost'
     ? 'http://localhost:8000'
@@ -844,6 +887,193 @@ function showToast(message, type = 'success') {
         toast.classList.add('hidden');
     }, 2500);
 }
+
+// ================================================
+// REPORT ISSUE FEATURE
+// ================================================
+const reportIssueBtn = document.getElementById('report-issue-btn');
+const reportIssueModal = document.getElementById('report-issue-modal');
+const reportCancelBtn = document.getElementById('report-cancel');
+const reportSubmitBtn = document.getElementById('report-submit');
+
+// GitHub repository details - update these to match your repo
+const GITHUB_REPO_OWNER = 'Paawan13';
+const GITHUB_REPO_NAME = 'bill_tracker';
+
+function initReportIssue() {
+    if (!reportIssueBtn || !reportIssueModal) return;
+
+    reportIssueBtn.addEventListener('click', showReportModal);
+
+    const backdrop = reportIssueModal.querySelector('.modal-backdrop');
+    backdrop.addEventListener('click', hideReportModal);
+
+    reportCancelBtn.addEventListener('click', hideReportModal);
+    reportSubmitBtn.addEventListener('click', submitIssue);
+}
+
+function showReportModal() {
+    // Reset form
+    document.getElementById('issue-title').value = '';
+    document.getElementById('issue-description').value = '';
+    document.getElementById('type-bug').checked = true;
+    document.getElementById('include-screenshot').checked = true;
+    document.getElementById('include-console').checked = true;
+
+    reportIssueModal.classList.remove('hidden');
+}
+
+function hideReportModal() {
+    reportIssueModal.classList.add('hidden');
+}
+
+async function captureScreenshot() {
+    try {
+        // Hide the report modal and button temporarily for clean screenshot
+        reportIssueModal.classList.add('hidden');
+        reportIssueBtn.style.display = 'none';
+
+        // Wait for DOM to update
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        const canvas = await html2canvas(document.body, {
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: null,
+            scale: 1,
+            logging: false,
+            ignoreElements: (element) => {
+                return element.id === 'report-issue-modal' || element.id === 'report-issue-btn';
+            }
+        });
+
+        // Restore button
+        reportIssueBtn.style.display = '';
+
+        // Convert to base64
+        return canvas.toDataURL('image/png');
+    } catch (error) {
+        console.error('Screenshot capture failed:', error);
+        reportIssueBtn.style.display = '';
+        return null;
+    }
+}
+
+function formatConsoleLogs() {
+    if (consoleLogs.length === 0) {
+        return 'No console logs captured.';
+    }
+
+    return consoleLogs.map(log => {
+        const icon = {
+            'error': '[ERROR]',
+            'warn': '[WARN]',
+            'info': '[INFO]',
+            'log': '[LOG]'
+        }[log.type] || '[LOG]';
+
+        return `${log.timestamp} ${icon} ${log.message}`;
+    }).join('\n');
+}
+
+async function submitIssue() {
+    const issueType = document.querySelector('input[name="issue-type"]:checked')?.value || 'bug';
+    const title = document.getElementById('issue-title').value.trim();
+    const description = document.getElementById('issue-description').value.trim();
+    const includeScreenshot = document.getElementById('include-screenshot').checked;
+    const includeConsole = document.getElementById('include-console').checked;
+
+    if (!title) {
+        showToast('Please enter a title for the issue', 'error');
+        return;
+    }
+
+    showLoading(true);
+
+    try {
+        // Build issue body
+        let body = '';
+
+        // Type label
+        const typeLabels = {
+            'bug': 'Bug Report',
+            'enhancement': 'Feature Request',
+            'question': 'Question'
+        };
+        body += `## ${typeLabels[issueType] || 'Issue'}\n\n`;
+
+        // Description
+        if (description) {
+            body += `### Description\n${description}\n\n`;
+        }
+
+        // Environment info
+        body += `### Environment\n`;
+        body += `- **URL**: ${window.location.href}\n`;
+        body += `- **User Agent**: ${navigator.userAgent}\n`;
+        body += `- **Screen**: ${window.screen.width}x${window.screen.height}\n`;
+        body += `- **Viewport**: ${window.innerWidth}x${window.innerHeight}\n`;
+        body += `- **Timestamp**: ${new Date().toISOString()}\n\n`;
+
+        // Console logs
+        if (includeConsole) {
+            const logs = formatConsoleLogs();
+            body += `### Console Logs\n\`\`\`\n${logs}\n\`\`\`\n\n`;
+        }
+
+        // Screenshot instructions
+        if (includeScreenshot) {
+            const screenshotData = await captureScreenshot();
+            if (screenshotData) {
+                body += `### Screenshot\n`;
+                body += `> A screenshot was captured. Please paste it below by pressing Ctrl+V (Cmd+V on Mac) in the GitHub issue editor.\n`;
+                body += `> The screenshot has been copied to your clipboard.\n\n`;
+
+                // Try to copy screenshot to clipboard
+                try {
+                    const blob = await (await fetch(screenshotData)).blob();
+                    await navigator.clipboard.write([
+                        new ClipboardItem({ 'image/png': blob })
+                    ]);
+                } catch (clipboardError) {
+                    console.warn('Could not copy screenshot to clipboard:', clipboardError);
+                    // Open screenshot in new tab as fallback
+                    body += `> If clipboard paste doesn't work, right-click and save this image:\n`;
+                    body += `> [Screenshot captured - will open in new tab]\n\n`;
+                    window.open(screenshotData, '_blank');
+                }
+            }
+        }
+
+        // Build GitHub issue URL
+        const labels = issueType === 'bug' ? 'bug' : issueType === 'enhancement' ? 'enhancement' : 'question';
+        const issueTitle = `[${typeLabels[issueType]}] ${title}`;
+
+        // URL encode the parameters
+        const params = new URLSearchParams({
+            title: issueTitle,
+            body: body,
+            labels: labels
+        });
+
+        const githubUrl = `https://github.com/${GITHUB_REPO_OWNER}/${GITHUB_REPO_NAME}/issues/new?${params.toString()}`;
+
+        // Open GitHub issue page
+        window.open(githubUrl, '_blank');
+
+        hideReportModal();
+        showToast('Opening GitHub issue page...', 'success');
+
+    } catch (error) {
+        console.error('Error creating issue:', error);
+        showToast('Failed to create issue. Please try again.', 'error');
+    } finally {
+        showLoading(false);
+    }
+}
+
+// Initialize report issue on DOM ready
+document.addEventListener('DOMContentLoaded', initReportIssue);
 
 // Make functions available globally for debugging
 window.fetchBills = fetchBills;
