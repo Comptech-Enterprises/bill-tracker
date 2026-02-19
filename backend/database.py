@@ -1,15 +1,21 @@
-import sqlite3
+import os
 from datetime import datetime
 from typing import Optional
-import os
+from urllib.parse import urlparse
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "bills.db")
+import psycopg2
+from psycopg2.extras import RealDictCursor
+
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 
 def get_connection():
     """Get a database connection."""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
+    if not DATABASE_URL:
+        raise RuntimeError("DATABASE_URL environment variable not set")
+
+    # Parse the URL and connect
+    conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
     return conn
 
 
@@ -19,13 +25,13 @@ def init_db():
     cursor = conn.cursor()
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS bills (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             date TEXT,
             vendor TEXT,
             category TEXT,
             amount REAL,
             image_path TEXT,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
     conn.commit()
@@ -39,17 +45,14 @@ def insert_bill(date: str, vendor: str, category: str, amount: float, image_path
     cursor.execute(
         """
         INSERT INTO bills (date, vendor, category, amount, image_path)
-        VALUES (?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s)
+        RETURNING *
         """,
         (date, vendor, category, amount, image_path)
     )
-    conn.commit()
-    bill_id = cursor.lastrowid
-
-    cursor.execute("SELECT * FROM bills WHERE id = ?", (bill_id,))
     row = cursor.fetchone()
+    conn.commit()
     conn.close()
-
     return dict(row)
 
 
@@ -67,7 +70,7 @@ def delete_bill(bill_id: int) -> bool:
     """Delete a bill by ID."""
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM bills WHERE id = ?", (bill_id,))
+    cursor.execute("DELETE FROM bills WHERE id = %s", (bill_id,))
     deleted = cursor.rowcount > 0
     conn.commit()
     conn.close()
@@ -87,7 +90,7 @@ def get_insights() -> dict:
     cursor.execute("""
         SELECT category, SUM(amount) as total
         FROM bills
-        WHERE strftime('%Y-%m', date) = ?
+        WHERE TO_CHAR(date::date, 'YYYY-MM') = %s
         GROUP BY category
         ORDER BY total DESC
     """, (current_month,))
@@ -97,7 +100,7 @@ def get_insights() -> dict:
     cursor.execute("""
         SELECT category, SUM(amount) as total
         FROM bills
-        WHERE strftime('%Y', date) = ?
+        WHERE TO_CHAR(date::date, 'YYYY') = %s
         GROUP BY category
         ORDER BY total DESC
     """, (current_year,))
@@ -105,9 +108,9 @@ def get_insights() -> dict:
 
     # Monthly trend for last 12 months
     cursor.execute("""
-        SELECT strftime('%Y-%m', date) as month, SUM(amount) as total
+        SELECT TO_CHAR(date::date, 'YYYY-MM') as month, SUM(amount) as total
         FROM bills
-        WHERE date >= date('now', '-12 months')
+        WHERE date::date >= CURRENT_DATE - INTERVAL '12 months'
         GROUP BY month
         ORDER BY month ASC
     """)
@@ -125,7 +128,7 @@ def get_insights() -> dict:
     cursor.execute("""
         SELECT COALESCE(SUM(amount), 0) as total
         FROM bills
-        WHERE strftime('%Y-%m', date) = ?
+        WHERE TO_CHAR(date::date, 'YYYY-MM') = %s
     """, (current_month,))
     total_this_month = cursor.fetchone()["total"]
 
@@ -133,19 +136,19 @@ def get_insights() -> dict:
     cursor.execute("""
         SELECT COALESCE(SUM(amount), 0) as total
         FROM bills
-        WHERE strftime('%Y', date) = ?
+        WHERE TO_CHAR(date::date, 'YYYY') = %s
     """, (current_year,))
     total_this_year = cursor.fetchone()["total"]
 
     # Monthly breakdown with category details (last 12 months)
     cursor.execute("""
         SELECT
-            strftime('%Y-%m', date) as month,
+            TO_CHAR(date::date, 'YYYY-MM') as month,
             category,
             SUM(amount) as total,
             COUNT(*) as count
         FROM bills
-        WHERE date >= date('now', '-12 months')
+        WHERE date::date >= CURRENT_DATE - INTERVAL '12 months'
         GROUP BY month, category
         ORDER BY month DESC, total DESC
     """)

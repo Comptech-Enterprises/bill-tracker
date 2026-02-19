@@ -2,8 +2,10 @@
 // BILLKEEPER - Mobile-First Bill Tracker App
 // ================================================
 
-// API Base URL
-const API_URL = 'http://localhost:8000';
+// API Base URL - auto-detect environment
+const API_URL = window.location.hostname === 'localhost'
+    ? 'http://localhost:8000'
+    : 'https://bill-tracker-api.onrender.com';  // UPDATE THIS with your Render backend URL
 
 // Global state
 let bills = [];
